@@ -19,15 +19,12 @@ library(sjPlot)
 # Repository definition for R project. All files called from this repo.
 here()
 
-df_raw <- read.csv(file = here("data", "cohorte_LMM_OBE.csv"), 
+df <- read.csv(file = here("data", "cohorte_LMM_OBE.csv"), 
                    header = TRUE, sep = ";", dec = ",", na.strings = c("NaN", "Na", "#NUL!", " "))
-head(df_raw)
-colnames(df_raw)
-nrow(df_raw)
-
-inclus <- df_raw$Ball_speed=="slow"
-df <- df_raw[inclus,]
+head(df)
+colnames(df)
 nrow(df)
+
 
 df$Migraine <- factor(df$Migraine, levels=c("-0.5", "0.5"))
 levels(df$MIGRAINE)
@@ -230,7 +227,7 @@ chi2 / df.residual(Model_0)
 ##################################################################################################################
 # Modèle 1 #
 #################################################################################################################
-Model_1 <- lm(drift~ OBE, na.action = na.exclude, data=df)
+Model_1 <- lm(drift~ OBE*Ball_speed, na.action = na.exclude, data=df)
 summary(Model_1)
 
 # Vérification des prérequis
@@ -579,3 +576,48 @@ ft <- flextable(loadings_std)
 doc <- read_docx()
 doc <- body_add_flextable(doc, value = ft)
 print(doc, target = here("Figures", "FBI_OBE_Mediation_loadings_std_V2.docx"))
+
+
+
+################################################################################################################
+# Linear Mixed Models #
+################################################################################################################
+library(lme4)      # Pour créer le modèle mixte
+library(lmerTest)  # Pour obtenir les p-values (méthode de Satterthwaite)
+library(car)       # Pour le test d'ANOVA global
+
+df$Sub <- as.factor(df$Sub)
+df$Ball_speed <- as.factor(df$Ball_speed)
+df$OBE <- as.factor(df$OBE)
+
+
+mixt <- lmer(drift ~ OBE * Ball_speed + (1 | Sub), data=df)
+
+# Affichage des résultats détaillés
+summary(mixt)
+# 1. Histogramme des résidus (Normalité)
+hist(residuals(mixt), main="Normalité des résidus du LMM", col="lightblue")
+
+# 2. Graphique des valeurs résiduelles vs valeurs prédites (Homoscédasticité)
+plot(mixt, type = c("p", "smooth"), 
+     main = "Homoscédasticité (les points doivent former une bande homogène)")
+
+# 3. QQ-plot des résidus
+qqnorm(residuals(mixt))
+qqline(residuals(mixt), col = "red")
+
+
+
+library(performance)
+library(see)
+
+check_model(mixt)
+check_outliers(mixt)
+
+set.seed(123)
+check_autocorrelation(mixt, nsim=10000)
+
+# Visualiser l'autocorrélation selon l'ordre des données
+acf(resid(mixt))
+
+check_normality(mixt)

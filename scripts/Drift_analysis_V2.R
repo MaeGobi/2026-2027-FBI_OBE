@@ -183,6 +183,8 @@ ggsave(here("figures", "categ_distribution_plots_V2.png"),
 ###################################################################################################################
 # Drift
 ###################################################################################################################
+df <- df[sample(nrow(df)), ]
+
 # Description of Drift
 summary(df$drift)
 describe(df$drift)
@@ -579,3 +581,21 @@ ft <- flextable(loadings_std)
 doc <- read_docx()
 doc <- body_add_flextable(doc, value = ft)
 print(doc, target = here("Figures", "FBI_OBE_Mediation_loadings_std_V2.docx"))
+
+
+
+
+library(nlme)
+library(lmtest)
+
+
+# 2. Trier impérativement par sujet puis par ordre chronologique d'essai
+df <- df[order(df$Sub, df_V2$Num_Essai), ]
+
+# 3. Régression GLS avec structure AR(1) intra-sujet (SANS effet aléatoire)
+Model_V2_GLS <- gls(drift ~ OBE, 
+                    correlation = corAR1(form = ~ Num_Essai | ID_Sujet), 
+                    data = df_V2, 
+                    na.action = na.exclude)
+
+summary(Model_V2_GLS)
