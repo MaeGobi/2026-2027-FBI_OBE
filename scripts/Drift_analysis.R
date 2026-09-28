@@ -522,3 +522,61 @@ model_comparison <- data.frame(
           BIC(Model_7))
 )
 print(model_comparison)
+
+
+# Global summary table of all models (exportation, article ready)
+tab_model(Model_1, Model_2, Model_3, Model_4, Model_5, Model_6, Model_7,
+          show.aic = TRUE,
+          show.zeroinf = TRUE,
+          show.intercept = FALSE,
+          transform = "exp",
+          dv.labels = c("Model 1", "Model 2", "Model 3", "Model 4", "Model 5", "Model_6", "Model_7"),
+          pred.labels = c("OBE0.5" = "OBE",
+                          "CDS" = "Total CDS score",
+                          "Age" = "Age",
+                          "Sex0.5" = "Sex (Woman)",
+                          "Anxiety" = "Anxiety (HADS-A)",
+                          "Depression" = "Depression (HADS-D)",
+                          "Migraine0.5" = "Migraine (Yes)"),
+          file = here("Figures", "tableau_modeles_regression.doc"))
+
+
+
+
+#################################################################################################################
+# Simple Mediation  Model Drift
+#################################################################################################################
+library(lavaan)
+
+# Mediation model definition
+med_CDS_tot <- 
+  ' # direct effect
+             drift ~ c*OBE
+           # mediators
+             CDS ~ a*OBE + Age
+             drift ~ b*CDS + Age
+           # indirect effects
+             ab := a*b
+           # total effect
+             total := c + (a*b)
+         '
+#### Fitting of mediation model
+fit_med <- sem(med_CDS_tot, data=df, estimator="MLR")
+summary(fit_med, standardized=TRUE, fit.measures=TRUE, ci=TRUE)
+
+library(officer)
+library(flextable)
+#### Export results as table
+# Extraction of standardized estimate
+tab_SEM <- standardizedsolution(fit_med, type = "std.all", ci = TRUE)
+
+# Filter standardized loadings (std.all)
+loadings_std <- tab_SEM %>%
+  mutate(across(c(est.std, se, ci.lower, ci.upper, z, pvalue), ~round(., 3)))
+print(loadings_std)
+
+# Export to Word
+ft <- flextable(loadings_std)
+doc <- read_docx()
+doc <- body_add_flextable(doc, value = ft)
+print(doc, target = here("Figures", "FBI_OBE_Mediation_loadings_std.docx"))
