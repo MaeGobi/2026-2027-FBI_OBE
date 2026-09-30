@@ -565,11 +565,14 @@ med_CDS_tot <-
 fit_med <- sem(med_CDS_tot, data=df, estimator="MLR")
 summary(fit_med, standardized=TRUE, fit.measures=TRUE, ci=TRUE)
 
+fit_med_boot <- sem(med_CDS_tot, data=df, estimator="ML", se="bootstrap", bootstrap=5000)
+summary(fit_med_boot, standardized=TRUE, fit.measures=TRUE, ci=TRUE)
+
 library(officer)
 library(flextable)
 #### Export results as table
 # Extraction of standardized estimate
-tab_SEM <- standardizedsolution(fit_med, type = "std.all", ci = TRUE)
+tab_SEM <- standardizedsolution(fit_med_boot, type = "std.all", ci = TRUE)
 
 # Filter standardized loadings (std.all)
 loadings_std <- tab_SEM %>%
@@ -580,22 +583,4 @@ print(loadings_std)
 ft <- flextable(loadings_std)
 doc <- read_docx()
 doc <- body_add_flextable(doc, value = ft)
-print(doc, target = here("Figures", "FBI_OBE_Mediation_loadings_std_V2.docx"))
-
-
-
-
-library(nlme)
-library(lmtest)
-
-
-# 2. Trier impérativement par sujet puis par ordre chronologique d'essai
-df <- df[order(df$Sub, df_V2$Num_Essai), ]
-
-# 3. Régression GLS avec structure AR(1) intra-sujet (SANS effet aléatoire)
-Model_V2_GLS <- gls(drift ~ OBE, 
-                    correlation = corAR1(form = ~ Num_Essai | ID_Sujet), 
-                    data = df_V2, 
-                    na.action = na.exclude)
-
-summary(Model_V2_GLS)
+print(doc, target = here("Figures", "FBI_OBE_Mediation_loadings_std_V2_boot.docx"))
