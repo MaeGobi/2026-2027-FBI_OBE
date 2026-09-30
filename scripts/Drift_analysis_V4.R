@@ -560,15 +560,19 @@ med_CDS_tot <-
            # total effect
              total := c + (a*b)
          '
-#### Fitting of mediation model
+#### Fitting of mediation model with MLR ###########
 fit_med <- sem(med_CDS_tot, data=df, estimator="MLR")
 summary(fit_med, standardized=TRUE, fit.measures=TRUE, ci=TRUE)
+
+#### Fitting of mediation model with boostrap ###########
+fit_med_boot <- sem(med_CDS_tot, data=df, estimator="ML", se="bootstrap", bootstrap=5000)
+summary(fit_med_boot, standardized=TRUE, fit.measures=TRUE, ci=TRUE)
 
 library(officer)
 library(flextable)
 #### Export results as table
 # Extraction of standardized estimate
-tab_SEM <- standardizedsolution(fit_med, type = "std.all", ci = TRUE)
+tab_SEM <- standardizedsolution(fit_med_boot, type = "std.all", ci = TRUE) # or fit_med
 
 # Filter standardized loadings (std.all)
 loadings_std <- tab_SEM %>%
@@ -579,4 +583,4 @@ print(loadings_std)
 ft <- flextable(loadings_std)
 doc <- read_docx()
 doc <- body_add_flextable(doc, value = ft)
-print(doc, target = here("Figures", "FBI_OBE_Mediation_loadings_std.docx"))
+print(doc, target = here("Figures", "FBI_OBE_Mediation_loadings_std_V4_boot.docx")) # or FBI_OBE_Mediation_loadings_std_V4
